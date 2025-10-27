@@ -1,0 +1,71 @@
+---
+
+- name: Stop web applications before time change
+  hosts: webservers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Stop web app as wepapp user
+      become_user: wepapp
+      shell: |
+        echo "Stopping Apache or app..."
+        # Exemple de commande :
+        /opt/app/bin/stop_app.sh
+
+- name: Change timezone (+1 hour) on web servers
+  hosts: webservers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Set system time +1 hour
+      shell: date -s "+1 hour"
+
+- name: Shutdown Oracle RAC databases
+  hosts: dbservers
+  gather_facts: false
+  become: true
+  serial: 1   # shutdown un serveur DB à la fois
+  tasks:
+    - name: Stop Oracle DB instance (SQL*Plus)
+      become_user: oracle
+      shell: |
+        ORACLE_SID={{ inventory_hostname }}
+        ORAENV_ASK=NO . oraenv
+        echo "shutdown immediate;" | sqlplus / as sysdba
+      args:
+        executable: /bin/bash
+
+- name: Change timezone (+1 hour) on DB servers
+  hosts: dbservers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Set system time +1 hour
+      shell: date -s "+1 hour"
+
+- name: Start Oracle RAC databases
+  hosts: dbservers
+  gather_facts: false
+  become: true
+  serial: 1
+  tasks:
+    - name: Start Oracle DB instance (SQL*Plus)
+      become_user: oracle
+      shell: |
+        ORACLE_SID={{ inventory_hostname }}
+        ORAENV_ASK=NO . oraenv
+        echo "startup;" | sqlplus / as sysdba
+      args:
+        executable: /bin/bash
+
+- name: Start web applications after DB startup
+  hosts: webservers
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Start web app as wepapp user
+      become_user: wepapp
+      shell: |
+        echo "Starting Apache or app..."
+        /opt/app/bin/start_app.sh
+
