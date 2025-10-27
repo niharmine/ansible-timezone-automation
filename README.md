@@ -1,2 +1,2 @@
 # ansible-timezone-automation
-Change time on webserves app
+Change the time on application web servers using Ansible, without having to run manual commands on each server
